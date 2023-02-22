@@ -53,9 +53,10 @@
 : disp, disp? if disp c, then ;
 : prefix, ( -- ) exit
   tgt is16? if $66 c, then src isimm? not swap is16? and if $67 c, then ;
-: inh, ( op -- ) c, asm$ ;
+: op, ( op -- ) dup 8 rshift ?dup if c, then c, ;
+: inh, ( op -- ) op, asm$ ;
 : modrm1, ( reg op -- )                   \ modrm op with 1 argument
-  prefix, c, ( reg ) 3 lshift tgtid tgt mod or or ( modrm ) c,
+  prefix, op, ( reg ) 3 lshift tgtid tgt mod or or ( modrm ) c,
   disp? if disp c, then asm$ ;
 : modrm2, ( imm? reg op -- )                  \ modrm op with 2 arguments
   prefix,
@@ -65,21 +66,44 @@
   c, 3 lshift tgtid or tgt mod or ( modrm ) c,
   isimm? if , then disp, asm$ ;
 
-\ Operations
-: add, isimm? if 0 $81 else src $01 then modrm2, ;
-: cmp, isimm? if 7 $81 else src $39 then modrm2, ;
-: jmp, ( rel32 -- ) $e9 c, , ;
-: jz, ( rel32 -- ) $0f c, $84 c, , ;
-: jnz, ( rel32 -- ) $0f c, $85 c, , ;
-: mov, isimm? if prefix, $b8 tgtid or c, , asm$ else src $89 modrm2, then ;
-: mul, 4 $f7 modrm1, ;
-: neg, 3 $f7 modrm1, ;
-: not, 2 $f7 modrm1, ;
-: pop, prefix, $58 tgtid or c, asm$ ;
-: push, prefix, $50 tgtid or c, asm$ ;
-: ret, $c3 inh, ;
-: setg, $0f c, 0 $9f modrm1, ;
-: setl, $0f c, 0 $9c modrm1, ;
-: setz, $0f c, 0 $94 modrm1, ;
-: sub, isimm? if 5 $81 else src $29 then modrm2, ;
-: test, isimm? if 0 $f7 else src $85 then modrm2, ;
+\  Operations
+\ Inherent
+: op ( opcode -- ) doer c, does> ( a -- ) c@ inh, ;
+$c3 op ret,
+
+\ Relative Jumps
+: op ( opcode -- ) doer , does> ( rel32 a -- ) @ op, , ;
+$00e9 op jmp,
+$0f84 op jz,
+$0f85 op jnz,
+
+\ Single Operand
+: op ( reg opcode -- ) doer , c, does> ( a -- )
+  dup @ swap 4 + c@ swap modrm1, ;
+4 $f7 op mul,
+3 $f7 op neg,
+2 $f7 op not,
+0 $0f9f op setg,
+0 $0f9c op setl,
+0 $0f94 op setz,
+
+\ Two Operands
+: op ( immop immreg regop -- ) doer c, c, c, does> ( imm? a -- )
+  isimm? if
+    dup 1+ c@ ( immreg ) swap 2 + c@ ( immreg immop ) else
+    c@ src swap ( reg regop ) then
+  modrm2, ;
+$81 0 $01 op add,
+$81 7 $39 op cmp,
+$81 5 29 op sub,
+$f7 0 $85 op test,
+
+\ tgt or-ed in
+: op ( op -- ) doer c, does> ( a -- ) c@ tgtid or c, asm$ ;
+$58 op pop,
+$50 op push,
+
+\ Special
+: mov, isimm? if
+  prefix, $b8 tgtid or c, , asm$ else
+  src $89 modrm2, then ;
