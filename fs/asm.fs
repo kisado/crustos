@@ -58,13 +58,14 @@
 : modrm1, ( reg op -- )                   \ modrm op with 1 argument
   prefix, op, ( reg ) 3 lshift tgtid tgt mod or or ( modrm ) c,
   disp? if disp c, then asm$ ;
+: modrm<imm, ( imm immreg op -- )
+  op, 3 lshift tgtid or tgt mod or ( modrm ) c, , disp, asm$ ;
 : modrm2, ( imm? reg op -- )                  \ modrm op with 2 arguments
-  prefix,
-  isimm? not if src mod $c0 = not if
-    2 + c, ( src ) mod tgt 3 lshift or srcid or ( modrm ) c,
-    disp, asm$ exit then then
-  c, 3 lshift tgtid or tgt mod or ( modrm ) c,
-  isimm? if , then disp, asm$ ;
+  src mod $c0 = not if
+    2 + c, ( src ) mod tgt 3 lshift or srcid or
+  else
+    c, 3 lshift tgtid or tgt mod or then
+  ( modrm ) c, disp, asm$ ;
 
 \  Operations
 \ Inherent
@@ -89,10 +90,10 @@ $0f85 op jnz,
 
 \ Two Operands
 : op ( immop immreg regop -- ) doer c, c, c, does> ( imm? a -- )
+  prefix,
   isimm? if
-    dup 1+ c@ ( immreg ) swap 2 + c@ ( immreg immop ) else
-    c@ src swap ( reg regop ) then
-  modrm2, ;
+    dup 1+ c@ ( immreg ) swap 2 + c@ ( immreg immop ) modrm<imm, else
+    c@ src swap ( reg regop ) modrm2, then ;
 $81 0 $01 op add,
 $81 7 $39 op cmp,
 $81 5 29 op sub,
@@ -104,6 +105,7 @@ $58 op pop,
 $50 op push,
 
 \ Special
-: mov, isimm? if
-  prefix, $b8 tgtid or c, , asm$ else
-  src $89 modrm2, then ;
+: mov,
+  prefix, isimm? if
+    $b8 tgtid or c, , asm$ else
+    src $89 modrm2, then ;

@@ -14,5 +14,7 @@ bwnot $ffffffd5 #eq
 exprbinops 7 #eq
 boolops 0 #eq
 variables 42 #eq
+funcall 42 #eq
+2 3 adder 5 #eq
 
 testend

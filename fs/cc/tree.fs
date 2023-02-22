@@ -1,6 +1,7 @@
 \ C Compiler Tree Structure
 
 : nodeid ( node -- id ) c@ ;
+: nodeid! ( id node -- ) c! ;
 : cslots ( node -- slots ) 1+ 1+ c@ ;
 : cslots! ( slots node -- ) 1+ 1+ c! ;
 : cslots- ( node -- ) dup cslots 1- swap cslots! ;
@@ -22,6 +23,8 @@
 : data2! ( n node -- ) 'data 4 + ! ;
 : data3 ( node -- n ) 'data 8 + @ ;
 : data3! ( n node -- ) 'data 8 + ! ;
+: data4 ( node -- n ) 'data 12 + @ ;
+: data4! ( n node -- ) 'data 12 + ! ;
 
 : nextnode ( ref node -- ref next )
   dup firstchild ?dup if nip else begin ( ref node )

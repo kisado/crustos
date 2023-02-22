@@ -3,8 +3,9 @@
 \ Compiling Words
 : [compile] ' call, ; immediate
 : const code litn exit, ;
+4 const CELLSZ
 : alias ' code compile (alias) , ;
-: doer code compile (does) 4 allot ;
+: doer code compile (does) CELLSZ allot ;
 
 \ Memory
 : Ac@+ Ac@ A+ ;

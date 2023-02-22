@@ -22,3 +22,11 @@ int variables() {
 
     return foo + bar;
 }
+
+int funcall() {
+    return retconst();
+}
+
+int adder(int a, int b) {
+    return a + b;
+}

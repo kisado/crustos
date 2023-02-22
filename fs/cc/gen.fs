@@ -65,7 +65,9 @@ ASTIDCNT wordtbl gentbl ( node -- )
 :w ( Function )
   _debug if ." debug: " dup data1 stype nl> then
   dup data1 entry
-  dup data2 ( MAP_FUNCTION ) data2 ?dup if
+  dup data2 ( astfunc mapfunc )
+  here over data4!
+  dup data2 swap data3 - ?dup if
     ebp i32 sub, then
   genchildren
   _debug if current here current - spit nl> then ;
@@ -77,7 +79,7 @@ ASTIDCNT wordtbl gentbl ( node -- )
   ret, ;
 :w ( Constant ) eax data1 i32 mov, ;
 :w ( Statements ) genchildren ;
-'w genchildren ( Arguments )
+'w genchildren ( ArgSpecs )
 'w genchildren ( Expression )
 :w ( UnaryOp ) dup genchildren data1 uopgentbl swap wexec ;
 'w genchildren ( Factor )
@@ -97,6 +99,12 @@ ASTIDCNT wordtbl gentbl ( node -- )
   dup data1 ( node name )
   swap getfuncnode findvarinmap ( varnode ) data2 ( offset )
   eax [ebp]+ mov, ;
+:w ( FunCall )
+  data1 ( name )
+  curmap findfuncinmap ?dup not if _err then ( mapfunc )
+  data4 ( addr ) call,
+  eax [ebp] mov,
+  ebp 4 i32 add, ;
 
 : _ ( node -- ) gentbl over astid wexec ;
 current to gennode

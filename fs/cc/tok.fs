@@ -10,7 +10,7 @@ create buf LNSZ allot
 : a-z? ( c -- f ) dup 'A' - 26 < swap 'a' - 26 < or ;
 : identifier? ( c -- f ) dup 0-9? swap a-z? or ;
 
-create special1st ," (){}!~+-*/<>=&|;"
+create special1st ," (){}!~+-*/<>=&|;,"
 create special2nd ," =&|"
 
 \ advance to the next non-whitespace and return the char encountered.
@@ -25,7 +25,7 @@ create special2nd ," =&|"
   dup identifier? if begin ( c )
     Ac!+ cc< dup identifier? not until to putback
   else
-    dup special1st 16 [c]? 0< if _err then
+    dup special1st 17 [c]? 0< if _err then
     Ac!+ cc<
     dup special2nd 3 [c]? 0< if to putback else Ac!+ then
   then

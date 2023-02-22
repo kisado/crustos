@@ -2,6 +2,7 @@
 
 BITS 32
 
+%define CELLSZ 4
 %define PS_SZ 0x1000
 %define RS_SZ 0x1000
 %define MEMSIZE 0x40000
@@ -11,13 +12,13 @@ BITS 32
 %define SYSCALL_CHDIR 12
 
 %macro pspush 1
-    sub ebp, 4
+    sub ebp, CELLSZ
     mov dword [ebp], %1
 %endmacro
 
 %macro pspop 1
     mov %1, dword [ebp]
-    add ebp, 4
+    add ebp, CELLSZ
 %endmacro
 
 %macro firstword 3
@@ -158,7 +159,7 @@ defword '(alias)', 7, word_aliasroutine
 defword '(does)', 6, word_doesroutine
     pop eax
     mov ebx, eax
-    add ebx, 4
+    add ebx, CELLSZ
     pspush ebx
     jmp [eax]
 
@@ -179,15 +180,15 @@ defword '(?br)', 5, word_condbrroutine
     or eax, eax
     jz word_brroutine
     pop eax
-    add eax, 4
+    add eax, CELLSZ
     jmp eax
 
 defword '(next)', 6, word_nextroutine
-    dec dword [esp+4]
+    dec dword [esp+CELLSZ]
     jnz word_brroutine
     pop eax
     pop ebx
-    add eax, 4
+    add eax, CELLSZ
     jmp eax
 
 defword 'boot<', 5, word_bootrd
@@ -226,12 +227,12 @@ defword 'lnxcall', 7, word_lnxcall
     ret
 
 defword 'drop', 4, word_drop
-    add ebp, 4
+    add ebp, CELLSZ
     ret
 
 defword 'dup', 3, word_dup
     mov eax, [ebp]
-    sub ebp, 4
+    sub ebp, CELLSZ
     mov [ebp], eax
     ret
 
@@ -242,24 +243,24 @@ defword '?dup', 4, word_conddup
 
 defword 'swap', 4, word_swap
     mov eax, [ebp]
-    mov ebx, [ebp+4]
+    mov ebx, [ebp+CELLSZ]
     mov [ebp], ebx
-    mov [ebp+4], eax
+    mov [ebp+CELLSZ], eax
     ret
 
 defword 'over', 4, word_over
-    mov eax, [ebp+4]
-    sub ebp, 4
+    mov eax, [ebp+CELLSZ]
+    sub ebp, CELLSZ
     mov [ebp], eax
     ret
 
 defword 'rot', 3, word_rot
     mov eax, [ebp]
-    mov ebx, [ebp+4]
-    mov ecx, [ebp+8]
+    mov ebx, [ebp+CELLSZ]
+    mov ecx, [ebp+CELLSZ*2]
     mov [ebp], ecx
-    mov [ebp+4], eax
-    mov [ebp+8], ebx
+    mov [ebp+CELLSZ], eax
+    mov [ebp+CELLSZ*2], ebx
     ret
 
 defword 'nip', 3, word_nip
@@ -269,19 +270,19 @@ defword 'nip', 3, word_nip
 
 defword 'tuck', 4, word_tuck
     mov eax, [ebp]
-    mov ebx, [ebp+4]
+    mov ebx, [ebp+CELLSZ]
     mov [ebp], ebx
-    mov [ebp+4], eax
+    mov [ebp+CELLSZ], eax
     pspush eax
     ret
 
 defword 'rot>', 4, word_rotr
     mov eax, [ebp]
-    mov ebx, [ebp+4]
-    mov ecx, [ebp+8]
+    mov ebx, [ebp+CELLSZ]
+    mov ecx, [ebp+CELLSZ*2]
     mov [ebp], ebx
-    mov [ebp+4], ecx
-    mov [ebp+8], eax
+    mov [ebp+CELLSZ], ecx
+    mov [ebp+CELLSZ*2], eax
     ret
 
 ; Warning: RS routines are all called, which means that we have to work from
@@ -289,7 +290,7 @@ defword 'rot>', 4, word_rotr
 
 defword 'r>', 2, word_rs2ps
     pop eax
-    sub ebp,4
+    sub ebp, CELLSZ
     pop dword [ebp]
     jmp eax
 
@@ -299,13 +300,13 @@ defword '>r', 2, word_ps2rs
     jmp eax
 
 defword 'r@', 2, word_rsget
-    mov eax, [esp+4]
+    mov eax, [esp+CELLSZ]
     pspush eax
     ret
 
 defword 'r~', 2, word_rsdrop
     pop eax
-    add esp, 4
+    add esp, CELLSZ
     jmp eax
 
 defword 'scnt', 4, word_scnt
@@ -419,7 +420,7 @@ defword ',', 1, word_write
     pspop eax
     mov esi, [here]
     mov [esi], eax
-    add dword [here], 4
+    add dword [here], CELLSZ
     ret
 
 defword '+', 1, word_add
@@ -470,13 +471,13 @@ defword '<', 1, word_lt
 
 defword '<<c', 3, word_shlc
     pspush 0
-    shl dword [ebp+4], 1
+    shl dword [ebp+CELLSZ], 1
     setc byte [ebp]
     ret
 
 defword '>>c', 3, word_shrc
     pspush 0
-    shr dword [ebp+4], 1
+    shr dword [ebp+CELLSZ], 1
     setc byte [ebp]
     ret
 
@@ -495,7 +496,7 @@ litncode:
 litncode_end:
 defword 'litn', 4, word_litn
     pspush litncode
-    pspush litncode_end-litncode-4
+    pspush litncode_end-litncode-CELLSZ
     call word_movewrite
     jmp word_write
 
@@ -695,7 +696,7 @@ defword 'parse', 5, word_parse
     call _parse_ud
     test dword [ebp], -1
     jz _parse_no
-    neg dword [ebp+4]
+    neg dword [ebp+CELLSZ]
     ret
 _parse_no:
     mov dword [ebp], 0

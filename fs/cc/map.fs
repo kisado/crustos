@@ -22,7 +22,7 @@ create mapidnames 4 c, ," unit" 8 c, ," function" 3 c, ," var"
   dup nodeclosed? not if to activenode else drop then ;
 
 : Unit ( -- ) -1 MAP_UNIT createnode dup to curmap to activenode ;
-: Function ( name -- ) -1 MAP_FUNCTION newnode , 0 , ;
+: Function ( name -- ) -1 MAP_FUNCTION newnode , 0 , 0 , 0 , ;
 : Variable ( offset name -- ) 0 MAP_VARIABLE newnode , , ;
 
 : _[ '[' emit ;
@@ -30,7 +30,8 @@ create mapidnames 4 c, ," unit" 8 c, ," function" 3 c, ," var"
 
 MAPIDCNT wordtbl mapdatatbl ( node -- node )
 'w noop ( Unit )
-:w ( Function ) _[ dup data1 data1 stype ',' emit dup data2 .x _] ;
+:w ( Function ) _[
+  dup data1 data1 stype ',' emit dup data2 .x ',' emit dup data3 .x _] ;
 :w ( Variable ) _[ dup data1 stype ',' emit dup data2 .x _] ;
 
 : printmap ( node -- )
@@ -53,10 +54,18 @@ MAPIDCNT wordtbl mapdatatbl ( node -- node )
     2dup data1 s= if nip exit then nextsibling dup not
   until then ( name node ) nip ;
 
+: findfuncinmap ( name node -- funcnode )
+  dup nodeid MAP_UNIT = not if _err then
+  firstchild dup if begin ( name node )
+    2dup data1 data1 s= if nip exit then nextsibling dup not
+  until then ( name node ) nip ;
+
 : mapfunction ( astfunction -- )
   dup Function activenode over data2! dup begin ( astfunc astfunc )
     AST_DECLARE nextnodeid dup if
-    dup data1 activenode funsfsz+ swap Variable 0 else 1 then
+      dup parentnode nodeid AST_ARGSPECS = if
+        activenode data3 4 + activenode data3! then
+      dup data1 activenode funsfsz+ swap Variable 0 else 1 then
   until 2drop ;
 
 : mapunit ( astunit -- )
