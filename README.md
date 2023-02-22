@@ -1,6 +1,6 @@
 # crustos
 
-crustos (pronounced `krʌst` or `KRUST`, meaning `cross` in bulgarian) is a operating system aimed to be used when and if humanity collapses.
+crustos (pronounced `krʌst` or `KRUST`, meaning `cross` in bulgarian) is a operating system aimed to be used when and if humanity collapses
 
 current planned features are:
 - be able to access a wide variety of filesystems
