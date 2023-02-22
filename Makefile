@@ -14,7 +14,7 @@ run: crust
 
 .PHONY: test
 test: crust
-	./runtests.sh
+	echo "f<< tests/all.fs bye" | ./crust && echo "all tests passed"
 
 .PHONY: clean
 clean:

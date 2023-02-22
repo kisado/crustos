@@ -1,3 +1,6 @@
+f<< tests/harness.fs
+
+testbegin
 \ Tests for fs/lib/core.fs
 
 : incer doer , does> @ 1+ ;
@@ -7,4 +10,4 @@
 foo 42 #eq
 bar 102 #eq
 
-#psempty
+testend

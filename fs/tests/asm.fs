@@ -1,4 +1,8 @@
+f<< tests/harness.fs
 f<< asm.fs
+
+testbegin
+\ Tests for asm.fs
 
 code foo
   eax 42 i32 mov,
@@ -7,4 +11,5 @@ code foo
   ret,
 
 foo 42 #eq
-#psempty
+
+testend

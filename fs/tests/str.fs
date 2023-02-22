@@ -1,4 +1,8 @@
+f<< tests/harness.fs
 f<< str.fs
+
+testbegin
+\ Tests for str.fs
 
 create list
   5 c, ," hello"
@@ -10,4 +14,4 @@ create list
 : _ S" hello" list sfind 0 #eq ; _
 : _ S" baz" list sfind -1 #eq ; _
 
-#psempty
+testend

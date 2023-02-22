@@ -49,12 +49,15 @@ create _ 1 allot
 
 create _fds $20 allot
 _fds value 'curfd
+0 value fecho
+
 : >fd ( fd -- ) 'curfd 4 + tuck ! to 'curfd ;
 : fd@ ( -- fd ) 'curfd @ ;
 : fd~ ( -- ) fd@ fclose 'curfd 4 - to 'curfd ;
 : f< ( -- c-or-0 ) fd@ fread ;
 : fin< f< ?dup not if ( EOF )
-  fd~ fd@ not if ['] iin< to in< then $20 then ;
+  fd~ fd@ not if ['] iin< to in< then $20 then
+  fecho if dup emit then ;
 : f<< word fopen >fd ['] fin< to in< ;
 
 f<< init.fs

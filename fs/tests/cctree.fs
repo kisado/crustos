@@ -1,5 +1,8 @@
-\ C Compiler Tree Tests
+f<< tests/harness.fs
 f<< cc/tree.fs
+
+testbegin
+\ C Compiler Tree Tests
 
 2 1 createnode value n1
 n1 nodeid 1 #eq
@@ -62,4 +65,4 @@ create expected 1 c, 3 c,
 create res n1 traverse
 expected res 2 []= #
 
-#psempty
+testend

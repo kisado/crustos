@@ -1,11 +1,11 @@
-\ Tests for the C Compiler AST
-
+f<< tests/harness.fs
 f<< cc/cc.fs
 
-: opentestc S" test.c" fopen >fd ;
-opentestc
-' f< to cc<
-parseast
+testbegin
+\ Tests for the C Compiler AST
+
+: _parse S" tests/test.c" fopen >fd ['] f< to cc< parseast ;
+_parse
 
 curunit firstchild dup astid AST_FUNCTION #eq ( fnode )
 : s S" retconst" ;
@@ -16,4 +16,4 @@ firstchild ( expr ) firstchild ( factor )
 firstchild dup astid AST_CONSTANT #eq ( cnode )
 data1 42 #eq
 
-#psempty
+testend
