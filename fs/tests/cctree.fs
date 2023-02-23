@@ -4,11 +4,10 @@ f<< cc/tree.fs
 testbegin
 \ C Compiler Tree Tests
 
-2 1 createnode value n1
+1 createnode value n1
 n1 nodeid 1 #eq
-n1 nodeclosed? not #
 
--1 2 createnode value n2
+2 createnode value n2
 n2 n1 addnode
 n2 nodeid 2 #eq
 n2 parentnode n1 #eq
@@ -17,7 +16,7 @@ n2 prevsibling 0 #eq
 n2 firstchild 0 #eq
 n1 firstchild n2 #eq
 
-0 3 createnode 42 , value n3
+3 createnode 42 , value n3
 n3 n1 addnode
 n3 nodeid 3 #eq
 n3 'data @ 42 #eq
@@ -26,10 +25,9 @@ n3 nextsibling 0 #eq
 n3 prevsibling n2 #eq
 n3 firstchild 0 #eq
 n1 firstchild n2 #eq
-n1 nodeclosed? #
 n1 lastchild n3 #eq
 
-0 4 createnode value n4
+4 createnode value n4
 n4 n2 addnode
 n4 nodeid 4 #eq
 n4 parentnode n2 #eq

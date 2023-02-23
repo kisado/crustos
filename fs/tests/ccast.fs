@@ -12,7 +12,6 @@ curunit firstchild dup astid AST_FUNCTION #eq ( fnode )
 dup data1 s s= #
 firstchild nextsibling dup astid AST_STATEMENTS #eq ( snode )
 firstchild dup astid AST_RETURN #eq ( rnode )
-firstchild ( expr ) firstchild ( factor )
 firstchild dup astid AST_CONSTANT #eq ( cnode )
 data1 42 #eq
 

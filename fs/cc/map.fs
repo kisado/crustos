@@ -18,12 +18,12 @@ create mapidnames 4 c, ," unit" 8 c, ," function" 3 c, ," var"
 
 : _err ( -- ) abort" mapping error" ;
 : newnode
-  createnode dup activenode addnode ( node )
-  dup nodeclosed? not if to activenode else drop then ;
+  createnode dup activenode addnode ( node ) to activenode ;
 
-: Unit ( -- ) -1 MAP_UNIT createnode dup to curmap to activenode ;
-: Function ( name -- ) -1 MAP_FUNCTION newnode , 0 , 0 , 0 , ;
-: Variable ( offset name -- ) 0 MAP_VARIABLE newnode , , ;
+: Unit ( -- ) MAP_UNIT createnode dup to curmap to activenode ;
+: Function ( name -- ) MAP_FUNCTION newnode , 0 , 0 , 0 , ;
+: Variable ( offset name -- )
+  MAP_VARIABLE createnode activenode addnode , , ;
 
 : _[ '[' emit ;
 : _] ']' emit ;
