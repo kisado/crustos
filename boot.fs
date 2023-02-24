@@ -9,6 +9,10 @@
 
 : immediate current 1- dup c@ $80 or swap c! ;
 : ['] ' litn ; immediate
+: to ['] ! [to] ;
+: to+ ['] +! [to] ;
+: to' ['] noop [to] ;
+
 : compile ' litn ['] call, call, ; immediate
 : if compile (?br) here 4 allot ; immediate
 : then here swap ! ; immediate

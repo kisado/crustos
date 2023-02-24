@@ -42,7 +42,7 @@ db %2
 
 %macro sysval 1
 mov eax,%1
-test byte [toflag], 0xff
+test dword [toptr], -1
 jnz to_is_set
 mov eax,[eax]
 pspush eax
@@ -51,7 +51,7 @@ ret
 
 %macro sysalias 1
 mov eax,%1
-test byte [toflag], 0xff
+test dword [toptr], -1
 jnz to_is_set
 jmp [eax]
 %endmacro
@@ -59,7 +59,7 @@ jmp [eax]
 SECTION .bss
 
 areg: resd 1
-toflag: resb 1
+toptr: resd 1
 exitonabort: resb 1
 bootptr: resd 1
 current: resd 1
@@ -104,7 +104,7 @@ defword 'noop', 4, word_noop
 
 defword 'quit', 4, word_quit
     cld
-    mov byte [toflag], 0
+    mov dword [toptr], 0
     mov dword [inrd], word_iinrd
     mov esp, rs_top
     jmp word_mainloop
@@ -136,15 +136,9 @@ defword '(cell)', 6, word_cellroutine
     pspush eax
     ret
 
-to_is_set:
-    mov byte [toflag], 0
-    pspop ebx
-    mov [eax], ebx
-    ret
-
 defword '(val)', 5, word_valroutine
     pop eax
-    test byte [toflag], 0xff
+    test dword [toptr], -1
     jnz to_is_set
     mov ebx, [eax]
     pspush ebx
@@ -152,7 +146,7 @@ defword '(val)', 5, word_valroutine
 
 defword '(alias)', 7, word_aliasroutine
     pop eax
-    test byte [toflag], 0xff
+    test dword [toptr], -1
     jnz to_is_set
     jmp [eax]
 
@@ -365,15 +359,15 @@ defword 'r>A', 3, word_rs2A
     pop dword [areg]
     jmp eax
 
-defword 'to', 2, word_to
-    mov byte [toflag], 1
-    ret
-
-defword 'to?', 3, word_tocond
-    xor eax, eax
-    mov al, [toflag]
+to_is_set:
     pspush eax
-    mov byte [toflag], 0
+    mov ebx, [toptr]
+    mov dword [toptr], 0
+    jmp ebx
+
+defword '[to]', 4, word_set_toptr
+    pspop eax
+    mov [toptr], eax
     ret
 
 defword '1+', 2, word_inc
@@ -414,6 +408,12 @@ defword '!', 1, word_store
     pspop eax
     pspop ebx
     mov [eax], ebx
+    ret
+
+defword '+!', 2, word_addstore
+    pspop eax
+    pspop ebx
+    add [eax], ebx
     ret
 
 defword ',', 1, word_write
@@ -805,17 +805,14 @@ defword ';', 0x81, word_compstop
     ret
 
 defword 'run1', 4, word_run1
-    xor eax, eax
-    mov al, [toflag]
-    push eax
-    mov byte [toflag], 0
+    push dword [toptr]
+    mov dword [toptr], 0
     call word_word
     call word_parse
     pspop eax
     test eax, eax
     jz _run1_notlit
-    pop eax
-    mov [toflag], al
+    pop dword [toptr]
     ret
 _run1_notlit:
     call word_curword
@@ -823,8 +820,7 @@ _run1_notlit:
     pspop eax
     test eax, eax
     jz word_wnf
-    pop eax
-    mov [toflag], al
+    pop dword [toptr]
     call word_execute
     jmp word_stackcond
 

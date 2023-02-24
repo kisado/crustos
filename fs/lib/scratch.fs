@@ -14,7 +14,7 @@ scratch( value scratch>
 
 : scratchallot ( n -- a )
   scratch> over + scratch) >= if scratch( to scratch> then
-  scratch> tuck + to scratch> ( a ) ;
+  to+ scratch> scratch> ( a ) ;
 
 : []>str ( a u -- str )
   dup 1+ scratchallot ( src u dst-1 ) >r dup r@ c!+ swap ( src dst u ) move r> ;
