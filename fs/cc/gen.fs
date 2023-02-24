@@ -57,7 +57,7 @@ alias noop gennode ( node -- ) \ forward declaration
   firstchild ?dup if begin dup gennode nextsibling ?dup not until then ;
 
 : spit ( a u -- ) A>r >r >A begin Ac@+ .x1 spc> next r>A ;
-: getfuncnode ( node -- node ) AST_FUNCTION parentnodeid data2 ;
+: getfuncmap ( node -- funcentry ) AST_FUNCTION parentnodeid data2 ;
 
 ASTIDCNT wordtbl gentbl ( node -- )
 'w genchildren ( Declare )
@@ -66,13 +66,13 @@ ASTIDCNT wordtbl gentbl ( node -- )
   _debug if ." debug: " dup data1 stype nl> then
   dup data1 entry
   dup data2 ( astfunc mapfunc )
-  here over data4!
-  dup data2 swap data3 - ?dup if
+  here over fmap.address!
+  dup fmap.sfsize swap fmap.argsize - ?dup if
     ebp i32 sub, then
   genchildren
   _debug if current here current - spit nl> then ;
 :w ( Return ) dup genchildren ( node )
-  getfuncnode data2 ?dup if
+  getfuncmap fmap.sfsize ?dup if
     ebp i32 add, then
   ebp 4 i32 sub,
   [ebp] eax mov,
@@ -92,12 +92,12 @@ ASTIDCNT wordtbl gentbl ( node -- )
 :w ( Assign )
   dup genchildren ( node )
   dup data1 ( node name )
-  swap getfuncnode findvarinmap ( varnode ) data2 ( offset )
+  swap getfuncmap findvarinmap ( varnode ) vmap.sfoff
   [ebp]+ eax mov, ;
 'w genchildren ( DeclarationList )
 :w ( Variable )
   dup data1 ( node name )
-  swap getfuncnode findvarinmap ( varnode ) data2 ( offset )
+  swap getfuncmap findvarinmap ( varnode ) vmap.sfoff
   eax [ebp]+ mov, ;
 :w ( FunCall )
   dup firstchild ?dup if begin ( argnode )
@@ -105,10 +105,8 @@ ASTIDCNT wordtbl gentbl ( node -- )
     ebp 4 i32 sub,
     [ebp] eax mov,
     nextsibling ?dup not until then
-
-  data1 ( name )
-  curmap findfuncinmap ?dup not if _err then ( mapfunc )
-  data4 ( addr ) call,
+  data1 ( name ) findfuncinmap ( mapfunc )
+  fmap.address call,
   eax [ebp] mov,
   ebp 4 i32 add, ;
 

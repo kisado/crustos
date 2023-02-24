@@ -8,5 +8,5 @@
 
 : cc1, ( -- )
   parseast curunit _debug if dup printast nl> then
-  dup mapunit _debug if curmap printmap then
+  dup mapunit _debug if printmap then
   gennode ;

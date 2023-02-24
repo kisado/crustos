@@ -1,8 +1,9 @@
 1 value _debug
 
-f<< lib/scratch.fs
+f<< sys/scratch.fs
 f<< lib/str.fs
 f<< lib/wordtbl.fs
+f<< lib/xdict.fs
 f<< asm.fs
 f<< cc/tok.fs
 f<< cc/tree.fs

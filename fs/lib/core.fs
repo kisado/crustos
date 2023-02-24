@@ -6,6 +6,7 @@
 4 const CELLSZ
 : alias ' code compile (alias) , ;
 : doer code compile (does) CELLSZ allot ;
+: does> r> ( exit current definition ) current 5 + ! ;
 
 \ Memory
 : Ac@+ Ac@ A+ ;
@@ -38,6 +39,12 @@ $08 const BS  $04 const EOF
   begin dup Ac@+ = if leave then next ( c )
   A- Ac@ = if A> r> - ( i ) else r~ -1 then r>A ;
 
+\ Dictionary
+: prevword ( w -- w ) 5 - @ ;
+: wordlen ( w -- len ) 1- c@ $3f and ;
+: wordname[] ( w -- sa sl )
+  dup wordlen swap 5 - over - ( sl sa ) swap ;
+
 \ Number Formatting
 create _ ," 0123456789abcdef"
 : .xh $f and _ + c@ emit ;
@@ -52,4 +59,9 @@ create _ ," 0123456789abcdef"
 : .S ( -- )
   S" SP " stype scnt .x1 spc> S" RS " stype rcnt .x1 spc>
   S" -- " stype stack? psdump ;
-: does> r> ( exit current definition ) current 5 + ! ;
+: dump ( a -- )
+  A>r >A 8 >r begin
+    ':' emit A> dup .x spc> ( a )
+    8 >r begin Ac@+ .x1 Ac@+ .x1 spc> next ( a ) >A
+    16 >r begin Ac@+ dup SPC - $5e > if drop '.' then emit next
+  nl> next r>A ;

@@ -2,5 +2,6 @@
 
 f<< tests/core.fs
 f<< tests/str.fs
+f<< tests/xdict.fs
 f<< tests/asm.fs
 f<< tests/cc/all.fs

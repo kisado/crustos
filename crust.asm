@@ -722,7 +722,7 @@ _find_loop:
     mov edi, edx
     dec edi
     mov al, [edi]
-    and al, 0x7f
+    and al, 0x3f
     cmp al, cl
     jnz _find_skip1
     sub edi, 4

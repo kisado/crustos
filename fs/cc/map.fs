@@ -5,70 +5,58 @@
 \ 1. Function Addresses
 \ 2. Local Variable Stack Frame (SF) offsets
 
-3 value MAPIDCNT
-0 value MAP_UNIT
-1 value MAP_FUNCTION
-2 value MAP_VARIABLE
+\ Those maps are xdicts. The first level is a dictionary of functions. It is
+\ located at "curmap". Each function in the AST results in an entry in this
+\ map. Each entry has this structure:
+\ 4b link to AST_FUNCTION node
+\ 4b SF size, which *includes* args size. SF-args=local vars
+\ 4b args size
+\ 4b address
+\ 4b variable declaration xdict
 
-create mapidnames 4 c, ," unit" 8 c, ," function" 3 c, ," var"
-                  0 c,
+newxdict curmap
 
-0 value curmap
-0 value activenode
+: fmap.astnode @ ;
+: fmap.sfsize 4 + @ ;
+: fmap.sfsize+ ( fmap -- sfoff )
+  dup fmap.sfsize swap 4 + ( sz a ) 4 swap +! ( sz ) ;
+: fmap.argsize 8 + @ ;
+: fmap.argsize+ ( n fmap -- ) 8 + +! ;
+: fmap.address 12 + @ ;
+: fmap.address! 12 + ! ;
+: fmap.vmap 16 + ;
+: vmap.sfoff @ ;
 
 : _err ( -- ) abort" mapping error" ;
+: printmap ( -- )
+  curmap @ ?dup not if exit then begin ( w )
+    dup wordname[] rtype spc>
+    dup fmap.sfsize .x spc> dup fmap.argsize .x nl>
+    dup fmap.vmap @ ?dup if begin ( w vmap )
+      spc> spc> dup wordname[] rtype spc> dup vmap.sfoff .x nl>
+      prevword ?dup not until then ( w )
+    prevword ?dup not until ;
 
-: Unit ( -- ) MAP_UNIT createnode dup to curmap to activenode ;
-: Function ( name -- )
-  MAP_FUNCTION createnode dup curmap addnode to activenode
-  ( name ) , 0 , 0 , 0 , ;
-: Variable ( offset name -- )
-  MAP_VARIABLE createnode activenode addnode , , ;
+: Function ( astnode -- entry )
+  dup data1 ( name ) curmap xentry ( astnode )
+  here swap , 16 allot0 ( entry ) ;
+: Variable ( offset name -- ) curmap @ fmap.vmap xentry , ;
 
-: _[ '[' emit ;
-: _] ']' emit ;
+: findvarinmap ( name funcentry -- varentry )
+  fmap.vmap xfind not if _err then ;
 
-MAPIDCNT wordtbl mapdatatbl ( node -- node )
-'w noop ( Unit )
-:w ( Function ) _[
-  dup data1 data1 stype ',' emit dup data2 .x ',' emit dup data3 .x _] ;
-:w ( Variable ) _[ dup data1 stype ',' emit dup data2 .x _] ;
-
-: printmap ( node -- )
-  ?dup not if ." null" exit then
-  dup nodeid mapidnames slistiter stype
-  mapdatatbl over nodeid wexec
-  firstchild ?dup if
-    '(' emit begin
-      dup printmap nextsibling dup if ',' emit then ?dup not until
-    ')' emit then ;
-
-\ Return node SF size and then increase it by 4.
-: funsfsz+ ( node -- sfsz )
-  dup nodeid MAP_FUNCTION = not if _err then
-  dup data2 tuck ( sz n sz ) 4 + swap 'data 4 + ! ;
-
-: findvarinmap ( name node -- varnode )
-  dup nodeid MAP_FUNCTION = not if _err then
-  firstchild dup if begin ( name node )
-    2dup data1 s= if nip exit then nextsibling dup not
-  until then ( name node ) nip ;
-
-: findfuncinmap ( name node -- funcnode )
-  dup nodeid MAP_UNIT = not if _err then
-  firstchild dup if begin ( name node )
-    2dup data1 data1 s= if nip exit then nextsibling dup not
-  until then ( name node ) nip ;
+: findfuncinmap ( name -- funcentry ) curmap xfind not if _err then ;
 
 : mapfunction ( astfunction -- )
-  dup Function activenode over data2! dup begin ( astfunc astfunc )
-    AST_DECLARE nextnodeid dup if
+  dup Function ( astfunc fmap ) over data2! ( astfunc ) begin ( curnode )
+    AST_DECLARE nextnodeid dup if ( astdecl )
       dup parentnode nodeid AST_ARGSPECS = if
-        activenode data3 4 + activenode data3! then
-      dup data1 activenode funsfsz+ swap Variable 0 else 1 then
-  until 2drop ;
+        4 curmap @ fmap.argsize+ then
+      dup data1 curmap @ fmap.sfsize+ swap Variable 0 else 1 then
+  until ( curnode ) drop ;
 
 : mapunit ( astunit -- )
-  Unit firstchild ?dup not if exit then begin ( astnode )
+  0 curmap !
+  firstchild ?dup not if exit then begin ( astnode )
     dup nodeid AST_FUNCTION = if dup mapfunction then
     nextsibling ?dup not until ;
