@@ -1,5 +1,5 @@
 f<< tests/harness.fs
-f<< str.fs
+f<< lib/str.fs
 
 testbegin
 \ Tests for str.fs

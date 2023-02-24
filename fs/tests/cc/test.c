@@ -30,3 +30,7 @@ int funcall() {
 int adder(int a, int b) {
     return a + b;
 }
+
+int plusone(int x) {
+    return adder(x, 1);
+}

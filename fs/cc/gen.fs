@@ -100,6 +100,12 @@ ASTIDCNT wordtbl gentbl ( node -- )
   swap getfuncnode findvarinmap ( varnode ) data2 ( offset )
   eax [ebp]+ mov, ;
 :w ( FunCall )
+  dup firstchild ?dup if begin ( argnode )
+    dup gennode
+    ebp 4 i32 sub,
+    [ebp] eax mov,
+    nextsibling ?dup not until then
+
   data1 ( name )
   curmap findfuncinmap ?dup not if _err then ( mapfunc )
   data4 ( addr ) call,
