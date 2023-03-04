@@ -8,8 +8,7 @@ testbegin
 _parse
 
 curunit firstchild dup astid AST_FUNCTION #eq ( fnode )
-: s S" retconst" ;
-dup data1 s s= #
+dup data1 S" retconst" s= #
 firstchild nextsibling dup astid AST_STATEMENTS #eq ( snode )
 firstchild dup astid AST_RETURN #eq ( rnode )
 firstchild dup astid AST_CONSTANT #eq ( cnode )

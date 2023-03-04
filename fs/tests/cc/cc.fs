@@ -20,5 +20,7 @@ ptrget 42 #eq
 ptrset 54 #eq
 12 condif 13 #eq
 42 condif 142 #eq
+42 incdec 43 #eq
+54 incdecp 55 #eq
 
 testend

@@ -6,13 +6,17 @@
 : _err ( node -- ) printast abort"  unexpected node" ;
 
 UOPSCNT wordtbl uopgentbl ( -- )
-'w vmneg, ( - )
-'w vmnot, ( ~ )
-'w vmboolnot, ( ! )
-
-LOPSCNT wordtbl lopgentbl ( -- )
+:w ( - ) operand?>result vmneg, ;
+:w ( ~ ) operand?>result vmnot, ;
+:w ( ! ) operand?>result vmboolnot, ;
 'w operand>&operand ( & )
 'w operand>[operand] ( * )
+:w ( ++ ) operand?>result vminc, ;
+:w ( -- ) operand?>result vmdec, ;
+
+POPSCNT wordtbl popgentbl ( -- )
+:w ( ++ ) vminc, ;
+:w ( -- ) vmdec, ;
 
 BOPSCNT wordtbl bopgentblmiddle ( node -- node )
 'w noop ( + )
@@ -27,6 +31,7 @@ BOPSCNT wordtbl bopgentblmiddle ( node -- node )
 'w noop ( != )
 :w ( && ) vmjz, swap ;
 :w ( || ) vmjnz, swap ;
+'w noop ( = )
 
 BOPSCNT wordtbl bopgentblpost ( -- )
 'w vmadd, ( + )
@@ -41,6 +46,7 @@ BOPSCNT wordtbl bopgentblpost ( -- )
 :w ( != ) abort" TODO" ;
 'w vmjmp! ( && )
 'w vmjmp! ( || )
+'w noop ( = )
 
 alias noop gennode ( node -- ) \ forward declaration
 
@@ -53,6 +59,14 @@ alias noop gennode ( node -- ) \ forward declaration
 : lvsfoff ( lvnode -- off )
   dup data1 swap getfuncmap ( name funcentry ) findvarinmap ( varentry )
   vmap.sfoff ;
+
+\ Special binop case
+: _assign ( node -- )
+  firstchild ?dup not if _err then ( lvnode )
+  dup nextsibling ?dup not if _err then ( lvnode exprnode )
+  gennode operand?>result
+  gennode
+  result>operand ;
 
 ASTIDCNT wordtbl gentbl ( node -- )
 'w drop ( Declare )
@@ -69,20 +83,16 @@ ASTIDCNT wordtbl gentbl ( node -- )
 :w ( Return )
   genchildren operand?>result vmret, ;
 :w ( Constant ) data1 const>operand ;
-:w ( Statements ) genchildren ;
+:w ( Statements ) firstchild ?dup if begin dup gennode vm$ nextsibling ?dup not until then ;
 'w genchildren ( ArgSpecs )
 :w ( LValue ) lvsfoff sf+>operand ;
 :w ( UnaryOp )
   dup genchildren
-  operand?>result
   data1 uopgentbl swap wexec ;
-:w ( Assign )
-  firstchild ?dup not if _err then ( lvnode )
-  dup nextsibling ?dup not if _err then ( lvnode exprnode )
-  gennode operand?>result
-  gennode
-  result>operand ;
-:w ( BinaryOp )
+:w ( PostfixOp )
+  dup genchildren
+  data1 popgentbl swap wexec ;
+:w ( BinaryOp ) dup data1 12 = if _assign exit then
   ( node ) >r
   r@ childcount 2 = not if abort" binop node with more than 2 children" then
   r@ firstchild dup nextsibling swap ( n1 n2 )
@@ -92,9 +102,7 @@ ASTIDCNT wordtbl gentbl ( node -- )
     pushresult, gennode operand?>result popresult, else
     gennode operand?>result then
   bopgentblpost r> data1 wexec ;
-:w ( LValueOp )
-  dup firstchild ?dup not if _err then gennode
-  data1 lopgentbl swap wexec ;
+'w _err ( Unused )
 :w ( If )
   firstchild ?dup not if _err then dup gennode ( exprnode )
   operand?>result vmjz, swap ( jump_addr exprnode )

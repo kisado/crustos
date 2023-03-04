@@ -4,14 +4,19 @@ f<< lib/str.fs
 testbegin
 \ Tests for str.fs
 
-create list
-  5 c, ," hello"
-  3 c, ," foo"
-  3 c, ," bar"
-  0 c,
+3 stringlist list "hello" "foo" "bar"
 
-: _ S" foo" list sfind 1 #eq ; _
-: _ S" hello" list sfind 0 #eq ; _
-: _ S" baz" list sfind -1 #eq ; _
+S" foo" list sfind 1 #eq
+S" hello" list sfind 0 #eq
+S" baz" list sfind -1 #eq
+
+'c' 0-9? not #
+'9' 0-9? #
+'z' A-Za-z? #
+'0' A-Za-z? not #
+'z' alnum? #
+'0' alnum? #
+
+
 
 testend

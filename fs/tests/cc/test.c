@@ -18,10 +18,10 @@ int boolops() {
 
 int variables() {
     int foo = 40;
-    int bar = 2;
-    bar = foo + bar;
+    int _bar = 2;
+    _bar = foo + _bar;
 
-    return foo + bar;
+    return foo + _bar;
 }
 
 int funcall() {
@@ -60,4 +60,18 @@ int condif(int x) {
     }
 
     return x;
+}
+
+int incdec(int x) {
+    ++x;
+    --x;
+
+    return ++x;
+}
+
+int incdecp(int x) {
+    x++;
+    x--;
+
+    return ++x--;
 }

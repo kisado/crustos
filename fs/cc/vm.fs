@@ -54,15 +54,16 @@ VM_NONE value operand
 : opersf+ ( -- off ) operandarg callsz + ;
 
 \ Resolve current operand as an assembler 'src' argument
-: operandAsm ( -- )
+: operandAsmKeep ( -- )
   operand VM_CONSTANT = if
     operandarg i32
   else operand VM_REGISTER = if
     ebx
   else operand VM_STACKFRAME = if
     opersf+ [ebp]+
-  else _err then then then
-  VM_NONE to operand ;
+  else _err then then then ;
+
+: operandAsm ( -- ) operandAsmKeep VM_NONE to operand ;
 
 : result! 1 to resultset? ;
 
@@ -151,6 +152,15 @@ VM_NONE value operand
   eax eax test,
   eax 0 i32 mov,
   al setz, ;
+
+\ inc/dec have 2 operation modes. If there's no operand, it incs/decs the result
+\ if there's an operand, it *post* incs/decs, that is, it moves the operand to
+\ the result and then it inc/dec the operand.
+: _ ( 'w -- ) operand VM_NONE = if
+    eax execute else
+    eax operandAsmKeep result! mov, operandAsm execute then ;
+: vminc, ['] inc, _ ;
+: vmdec, ['] dec, _ ;
 
 : vm<,
   eax operandAsm cmp,

@@ -20,6 +20,7 @@
 : <> ( n n -- l h ) 2dup > if swap then ;
 : min <> drop ;
 : max <> nip ;
+: =><= ( n l h -- f ) over - rot> ( h n l ) - >= ;
 
 \ Emitting
 $20 const SPC $0d const CR $0a const LF
@@ -29,7 +30,9 @@ $08 const BS  $04 const EOF
 : spc> SPC emit ;
 : stype ( str -- ) c@+ rtype ;
 : ," begin in< dup '"' = if drop exit then c, again ;
-: S" compile (s) here 1 allot here ," here -^ ( 'len len ) swap c! ; immediate
+: S" ( comp: -- ) ( not-comp: -- str )
+  compiling if compile (s) else here then
+  here 1 allot here ," here -^ ( 'len len ) swap c! ; immediate
 : ." [compile] S" compile stype ; immediate
 : abort" [compile] ." compile abort ; immediate
 

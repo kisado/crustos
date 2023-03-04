@@ -2,35 +2,28 @@
 \ requires cc/tok.fs and cc/ops.fs
 
 \ Unary Operators
-\ ID  SYM NAME
-\ 0   -   negate
-\ 1   ~   complement
-\ 2   !   not
-
-3 const UOPSCNT
-create uopssyms ," -~!?"
+7 const UOPSCNT
+UOPSCNT stringlist UOPTlist "-" "~" "!" "&" "*" "++" "--"
 
 : uopid ( tok -- opid? f )
-  c@+ 1 = if c@ uopssyms UOPSCNT [c]? dup 0< if drop 0 else 1 then
-    else drop 0 then ;
-: uopchar ( opid -- c ) UOPSCNT min uopssyms + c@ ;
+  UOPTlist sfind dup 0< if drop 0 else 1 then ;
+: uoptoken ( opid -- tok ) UOPTlist slistiter ;
 
-2 const LOPSCNT
-create lopssyms ," &*?"
+\ Postfix Operators
+2 const POPSCNT
+POPSCNT stringlist POPTlist "++" "--"
 
-: lopid ( tok -- opid? f )
-  c@+ 1 = if c@ lopssyms LOPSCNT [c]? dup 0< if drop 0 else 1 then
-    else drop 0 then ;
-: lopchar ( opid -- c ) LOPSCNT min lopssyms + c@ ;
+: popid ( tok -- opid? f )
+  POPTlist sfind dup 0< if drop 0 else 1 then ;
+: poptoken ( opid -- tok ) POPTlist slistiter ;
 
-12 const BOPSCNT
-create BOPTlist 1 c, ," +"  1 c, ," -"  1 c, ," *" 1  c, ," /"
-                1 c, ," <"  1 c, ," >"  2 c, ," <=" 2 c, ," >="
-                2 c, ," ==" 2 c, ," !=" 2 c, ," &&" 2 c, ," ||"
-                0 c,
+\ Binary Operators
+13 const BOPSCNT
+BOPSCNT stringlist BOPTlist
+"+" "-" "*" "/" "<" ">" "<=" ">=" "==" "!=" "&&" "||" "="
 
 create bopsprectbl  1 c, 1 c, 0 c, 0 c, 2 c, 2 c, 2 c, 2 c,
-                    3 c, 3 c, 4 c, 4 c,
+                    3 c, 3 c, 4 c, 4 c, 5 c,
 
 : bopid ( tok -- opid? f )
   BOPTlist sfind dup 0< if drop 0 else 1 then ;
@@ -47,19 +40,16 @@ create bopsprectbl  1 c, 1 c, 0 c, 0 c, 2 c, 2 c, 2 c, 2 c,
 6 const AST_ARGSPECS
 7 const AST_LVALUE
 8 const AST_UNARYOP
-9 const AST_ASSIGN
+9 const AST_POSTFIXOP
 10 const AST_BINARYOP
-11 const AST_LVALUEOP
+\ 11 unused
 12 const AST_IF
 \ 13 unused
 14 const AST_FUNCALL
 
-create astidnames 7 c, ," declare"  4 c, ," unit"     8 c, ," function"
-                  6 c, ," return"   8 c, ," constant" 5 c, ," stmts"
-                  4 c, ," args"     6 c, ," lvalue"   7 c, ," unaryop"
-                  6 c, ," assign"   5 c, ," binop"    6 c, ," lvalop"
-                  2 c, ," if"       1 c, ," _"        4 c, ," call"
-                  0 c,
+ASTIDCNT stringlist astidnames
+"declare" "unit" "function" "return" "constant" "stmts" "args" "lvalue"
+"unaryop" "postop" "binop" "_" "if" "_" "call"
 
 0 value curunit
 
@@ -80,11 +70,11 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
 'w noop ( Statements )
 'w noop ( ArgSpecs )
 'w _s ( LValue )
-:w ( UnaryOp ) _[ dup data1 uopchar emit _] ;
-'w noop ( Assign )
-:w ( BinaryOp ) _[ dup data1 boptoken stype _] ;
-:w ( LvalueOp ) _[ dup data1 lopchar emit _] ;
+:w ( UnaryOp ) _[ dup data1 uoptoken stype _] ;
 'w noop ( Unused )
+:w ( BinaryOp ) _[ dup data1 boptoken stype _] ;
+'w noop ( Unused )
+'w noop ( If )
 'w noop ( Unused )
 'w _s ( FunCall )
 
@@ -103,9 +93,8 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
 \ if not 0, next '_nextt' call will fetch token from here
 0 value nexttputback
 
-: _err ( tok -- )
-  stype spc> abort"  parsing error" ;
-: _assert ( tok f -- ) not if _err then ;
+: _err ( -- ) abort" parsing error" ;
+: _assert ( f -- ) not if _err then ;
 : _nextt
   nexttputback ?dup if 0 to nexttputback exit then
   nextt ?dup not if abort" expecting token" then ;
@@ -114,7 +103,7 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
 : expectType ( tok -- tok ) dup isType? not if _err then ;
 : expectConst ( tok -- n ) dup parse if nip else _err then ;
 : isIdent? ( tok -- f )
-  dup 1+ c@ a-z? not if drop 0 exit then
+  dup 1+ c@ identifier1st? not if drop 0 exit then
   c@+ >r begin ( a ) c@+ identifier? not if drop 0 then next drop 1 ;
 : expectIdent ( tok -- tok ) dup isIdent? _assert ;
 : expectChar ( tok c -- )
@@ -123,59 +112,68 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
 
 \ Parse Words
 
-: parseLvalue ( tok -- lvnode )
-  dup lopid if ( tok opid )
-    nip AST_LVALUEOP createnode swap , ( lopnode )
-    _nextt parseLvalue ( lopnode lvnode ) over addnode
-  else ( tok ) expectIdent AST_LVALUE createnode swap , then ;
+: parsePostfixOp ( tok -- node-or-0 )
+  dup popid if ( tok opid )
+    nip AST_POSTFIXOP createnode swap , ( node )
+  else to nexttputback 0 then ;
 
-\ Parse a constant, variable or function call
+\ A Factor can be:
+\ 1. a constant
+\ 2. an lvalue
+\ 3. a unaryop/postfixop containing a factor
+\ 4. a function call
 : parseFactor ( tok -- node-or-0 )
-  dup isIdent? if
-    _nextt ( prevtok newtok ) dup S" (" s= if
-      drop AST_FUNCALL createnode swap , begin ( node )
-        _nextt dup parseFactor ?dup if
-          nip over addnode
-          _nextt dup S" ," s= if drop else to nexttputback then 0
-        else
-          ')' expectChar 1 then until ( node )
-    else
-      to nexttputback parseLvalue then
-  else
-    parse if AST_CONSTANT createnode swap , else 0 then
-  then ;
-
-: parseUnaryOp ( tok -- opid? astid? f )
-  dup uopid if
-    nip AST_UNARYOP 1 else lopid if
-      AST_LVALUEOP 1 else 0 then then ;
-
-: parseExpression ( tok -- exprnode )
-  dup parseUnaryOp if ( tok opid astid )
-    createnode ( tok opid node ) swap , nip ( node )
-    _nextt parseExpression ( uopnode expr )
-    over addnode ( node )
+  dup uopid if ( tok opid )
+    nip AST_UNARYOP createnode swap , ( opnode )
+    _nextt parseFactor ?dup _assert over addnode ( opnode )
   else ( tok )
-    parseFactor ?dup _assert _nextt ( factor nexttok )
-    dup bopid if ( factor tok binop )
-      nip ( factor binop ) AST_BINARYOP createnode swap , ( factor node )
-      tuck addnode _nextt ( binnode tok )
-      begin ( bn tok )
-        parseFactor ?dup _assert _nextt ( bn factor tok ) dup bopid if ( bn fn tok bopid )
-          nip AST_BINARYOP createnode swap , ( bn1 fn bn2 )
-          rot ( fn bn2 bn1 ) over data1 bopprec over data1 bopprec < if
-            rot> tuck addnode ( bn1 bn2 ) dup rot addnode ( bn2->bn )
-          else
-            rot over addnode ( bn2 bn1 ) over addnode ( bn2->bn )
-          then ( bn )
-          _nextt 0 ( bn tok 0 )
-        else ( bn fn tok )
-          rot> over addnode swap 1 ( bn tok 1 ) then
-      until ( bn tok )
-      swap rootnode swap
+    dup isIdent? if                                           \ LValue or FunCall
+      _nextt ( prevtok newtok ) dup S" (" s= if               \ FunCall
+        drop AST_FUNCALL createnode swap , begin ( node )
+          _nextt dup parseFactor ?dup if                      \ an argument
+            nip over addnode
+            _nextt dup S" ," s= if drop else to nexttputback then 0
+          else                                                \ not an argument
+            ')' expectChar 1 then until ( node )
+      else ( prevtok newtok )                                 \ LValue
+        swap AST_LVALUE createnode swap , ( tok lvnode )
+        swap parsePostfixOp ( lvnode node-or-0 ) ?dup if ( lvnode opnode )
+          tuck addnode then ( lv-or-op-node ) then
+    else                                                      \ Constant
+      parse if AST_CONSTANT createnode swap , else 0 then
     then
-    ( node tok ) to nexttputback
   then ;
+
+\ An expression can be 2 things:
+\ 1. a factor
+\ 2. a binaryop containing two expressions
+: parseExpression ( tok -- exprnode )
+  \ tok is expected to be a factor
+  parseFactor ?dup _assert _nextt ( factor nexttok )
+  dup bopid if ( factor tok binop )
+    nip ( factor binop ) AST_BINARYOP createnode swap , ( factor node )
+    tuck addnode _nextt ( binnode tok )
+
+    \ consume tokens until binops stop coming
+    begin ( bn tok )
+      parseFactor ?dup _assert _nextt ( bn factor tok ) dup bopid if ( bn fn tok bopid )
+        nip AST_BINARYOP createnode swap , ( bn1 fn bn2 )
+
+        \ find best precedence
+        rot ( fn bn2 bn1 ) over data1 bopprec over data1 bopprec < if
+          rot> tuck addnode ( bn1 bn2 ) dup rot addnode ( bn2->bn )
+        else
+          rot over addnode ( bn2 bn1 ) over addnode ( bn2->bn )
+        then ( bn )
+        _nextt 0 ( bn tok 0 )
+      else ( bn fn tok )    \ not a binop
+        rot> over addnode swap 1 ( bn tok 1 ) then
+    until ( bn tok )
+
+    \ bn not result, rootnode is
+    swap rootnode swap
+  then
+  ( node tok ) to nexttputback ;
 
 : parseDeclare ( parentnode -- dnode )
   0 begin ( pnode *lvl )
@@ -185,7 +183,7 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
 
 : parseDeclarationList ( stmtsnode -- )
   parseDeclare _nextt '=' expectChar dup data1 ( dnode name )
-  swap parentnode AST_ASSIGN newnode ( name anode )
+  swap parentnode AST_BINARYOP newnode ( name anode ) 12 ( = ) ,
   AST_LVALUE newnode ( name lvnode ) swap , parentnode ( anode )
   _nextt parseExpression read; ( anode expr ) swap addnode ;
 
@@ -197,18 +195,9 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
     _nextt dup S" )" s= if 2drop exit then
     ',' expectChar _nextt again ;
 
-\ Parse an assignment statement. It consists of a '=' char with an lvalue on
-\ the left and an expression on the right. The left part can have lvalue ops
-\ applied to it.
-: parseAssign ( parent tok -- )
-  swap AST_ASSIGN newnode swap ( anode tok )
-  parseLvalue ( anode lvnode ) over addnode ( anode )
-  _nextt '=' expectChar ( anode )
-  _nextt parseExpression read; ( anode expr ) swap addnode ;
-
 alias noop parseStatements ( funcnode -- )
 
-create statementnames 6 c, ," return" 2 c, ," if" 0 c,
+2 stringlist statementnames "return" "if"
 2 wordtbl statementhandler ( snode -- snode )
 :w ( return )
   dup AST_RETURN newnode ( snode rnode )
@@ -229,7 +218,7 @@ create statementnames 6 c, ," return" 2 c, ," if" 0 c,
     dup S" }" s= if 2drop exit then
     dup statementnames sfind dup 0< if ( snode tok -1 )
       drop dup isType? if drop dup parseDeclarationList else ( snode tok )
-        over rot> parseAssign then ( snode )
+        parseExpression over addnode read; then ( snode )
     else ( snode tok idx ) nip statementhandler swap wexec then ( snode )
     _nextt again ;
 current to parseStatements
