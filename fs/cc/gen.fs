@@ -98,7 +98,10 @@ ASTIDCNT wordtbl gentbl ( node -- )
 :w ( If )
   firstchild ?dup not if _err then dup gennode ( exprnode )
   operand?>result vmjz, swap ( jump_addr exprnode )
-  nextsibling ?dup not if _err then gennode ( jump_addr ) vmjmp! ;
+  nextsibling ?dup not if _err then dup gennode ( jump_addr condnode )
+  nextsibling ?dup if ( jump_addr elsenode )
+    vmjnz, ( ja1 enode ja2 ) rot vmjmp! ( enode ja2 )
+    swap gennode ( ja2 ) then ( jump_addr ) vmjmp! ;
 'w _err ( unused )
 :w ( FunCall )
   dup childcount 4 * callargallot,

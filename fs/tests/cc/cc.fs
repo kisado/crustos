@@ -18,7 +18,7 @@ funcall 42 #eq
 42 plusone 43 #eq
 ptrget 42 #eq
 ptrset 54 #eq
-12 condif 12 #eq
+12 condif 13 #eq
 42 condif 142 #eq
 
 testend

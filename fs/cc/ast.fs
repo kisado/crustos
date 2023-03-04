@@ -197,17 +197,19 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
     _nextt dup S" )" s= if 2drop exit then
     ',' expectChar _nextt again ;
 
-\ Parse an LValue
+\ Parse an assignment statement. It consists of a '=' char with an lvalue on
+\ the left and an expression on the right. The left part can have lvalue ops
+\ applied to it.
 : parseAssign ( parent tok -- )
   swap AST_ASSIGN newnode swap ( anode tok )
   parseLvalue ( anode lvnode ) over addnode ( anode )
   _nextt '=' expectChar ( anode )
   _nextt parseExpression read; ( anode expr ) swap addnode ;
 
-alias noop parseStatements
+alias noop parseStatements ( funcnode -- )
 
 create statementnames 6 c, ," return" 2 c, ," if" 0 c,
-2 wordtbl statementhandler
+2 wordtbl statementhandler ( snode -- snode )
 :w ( return )
   dup AST_RETURN newnode ( snode rnode )
   _nextt parseExpression read; ( snode rnode expr )
@@ -216,7 +218,10 @@ create statementnames 6 c, ," return" 2 c, ," if" 0 c,
   _nextt '(' expectChar
   _nextt parseExpression ( sn ifn expr ) over addnode
   _nextt ')' expectChar
-  parseStatements ;
+  dup parseStatements ( snode ifnode )
+  _nextt dup S" else" s= if ( sn ifn tok )
+    drop parseStatements else
+    to nexttputback drop then ;
 
 : _ ( parentnode -- )
   _nextt '{' expectChar AST_STATEMENTS newnode _nextt
