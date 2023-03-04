@@ -19,6 +19,7 @@ int boolops() {
 int variables() {
     int foo = 40;
     int bar = 2;
+    bar = foo + bar;
 
     return foo + bar;
 }
@@ -32,5 +33,29 @@ int adder(int a, int b) {
 }
 
 int plusone(int x) {
-    return adder(x, 1);
+    return adder(1, x);
+}
+
+int ptrget() {
+    int a = 42;
+    int *b = &a;
+
+    return *b;
+}
+
+int ptrset() {
+    int a = 42;
+    int *b = &a;
+
+    *b = 54;
+    
+    return a;
+}
+
+int condif(int x) {
+    if (x == 42) {
+        x = x + 100;
+    }
+
+    return x;
 }

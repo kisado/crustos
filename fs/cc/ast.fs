@@ -7,7 +7,7 @@
 \ 1   ~   complement
 \ 2   !   not
 
-3 value UOPSCNT
+3 const UOPSCNT
 create uopssyms ," -~!?"
 
 : uopid ( tok -- opid? f )
@@ -15,7 +15,15 @@ create uopssyms ," -~!?"
     else drop 0 then ;
 : uopchar ( opid -- c ) UOPSCNT min uopssyms + c@ ;
 
-12 value BOPSCNT
+2 const LOPSCNT
+create lopssyms ," &*?"
+
+: lopid ( tok -- opid? f )
+  c@+ 1 = if c@ lopssyms LOPSCNT [c]? dup 0< if drop 0 else 1 then
+    else drop 0 then ;
+: lopchar ( opid -- c ) LOPSCNT min lopssyms + c@ ;
+
+12 const BOPSCNT
 create BOPTlist 1 c, ," +"  1 c, ," -"  1 c, ," *" 1  c, ," /"
                 1 c, ," <"  1 c, ," >"  2 c, ," <=" 2 c, ," >="
                 2 c, ," ==" 2 c, ," !=" 2 c, ," &&" 2 c, ," ||"
@@ -29,28 +37,28 @@ create bopsprectbl  1 c, 1 c, 0 c, 0 c, 2 c, 2 c, 2 c, 2 c,
 : bopprec ( opid -- precedence ) BOPSCNT min bopsprectbl + c@ ;
 : boptoken ( opid -- tok ) BOPTlist slistiter ;
 
-15 value ASTIDCNT
-0 value AST_DECLARE
-1 value AST_UNIT
-2 value AST_FUNCTION
-3 value AST_RETURN
-4 value AST_CONSTANT
-5 value AST_STATEMENTS
-6 value AST_ARGSPECS
-\ 7 unused
-8 value AST_UNARYOP
-\ 9 unused
-10 value AST_BINARYOP
-11 value AST_ASSIGN
-\ 12 unused
-13 value AST_VARIABLE
-14 value AST_FUNCALL
+15 const ASTIDCNT
+0 const AST_DECLARE
+1 const AST_UNIT
+2 const AST_FUNCTION
+3 const AST_RETURN
+4 const AST_CONSTANT
+5 const AST_STATEMENTS
+6 const AST_ARGSPECS
+7 const AST_LVALUE
+8 const AST_UNARYOP
+9 const AST_ASSIGN
+10 const AST_BINARYOP
+11 const AST_LVALUEOP
+12 const AST_IF
+\ 13 unused
+14 const AST_FUNCALL
 
 create astidnames 7 c, ," declare"  4 c, ," unit"     8 c, ," function"
                   6 c, ," return"   8 c, ," constant" 5 c, ," stmts"
-                  4 c, ," args"     4 c, ," expr"     7 c, ," unaryop"
-                  1 c, ," _"        5 c, ," binop"    6 c, ," assign"
-                  1 c, ," _"        3 c, ," var"      4 c, ," call"
+                  4 c, ," args"     6 c, ," lvalue"   7 c, ," unaryop"
+                  6 c, ," assign"   5 c, ," binop"    6 c, ," lvalop"
+                  2 c, ," if"       1 c, ," _"        4 c, ," call"
                   0 c,
 
 0 value curunit
@@ -64,25 +72,25 @@ create astidnames 7 c, ," declare"  4 c, ," unit"     8 c, ," function"
 : _i _[ dup data1 .x _] ;
 
 ASTIDCNT wordtbl astdatatbl ( node -- node )
-'w _s ( Declare )
+:w ( Declare ) _[ dup data1 stype spc> dup data2 .x1 _] ;
 'w noop ( Unit )
 'w _s ( Function )
 'w noop ( Return )
 'w _i ( Constant )
 'w noop ( Statements )
 'w noop ( ArgSpecs )
-'w noop ( Unused )
+'w _s ( LValue )
 :w ( UnaryOp ) _[ dup data1 uopchar emit _] ;
-'w noop ( Unused )
+'w noop ( Assign )
 :w ( BinaryOp ) _[ dup data1 boptoken stype _] ;
-'w _s ( Assign )
+:w ( LvalueOp ) _[ dup data1 lopchar emit _] ;
 'w noop ( Unused )
-'w _s ( Variable )
+'w noop ( Unused )
 'w _s ( FunCall )
 
 : printast ( node -- )
   ?dup not if ." null" exit then
-  dup astid idname stype
+  dup astid dup AST_FUNCTION = if nl> then idname stype
   astdatatbl over astid wexec
   firstchild ?dup if
     '(' emit begin
@@ -115,6 +123,12 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
 
 \ Parse Words
 
+: parseLvalue ( tok -- lvnode )
+  dup lopid if ( tok opid )
+    nip AST_LVALUEOP createnode swap , ( lopnode )
+    _nextt parseLvalue ( lopnode lvnode ) over addnode
+  else ( tok ) expectIdent AST_LVALUE createnode swap , then ;
+
 \ Parse a constant, variable or function call
 : parseFactor ( tok -- node-or-0 )
   dup isIdent? if
@@ -126,14 +140,19 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
         else
           ')' expectChar 1 then until ( node )
     else
-      to nexttputback AST_VARIABLE createnode swap , then
+      to nexttputback parseLvalue then
   else
     parse if AST_CONSTANT createnode swap , else 0 then
   then ;
 
+: parseUnaryOp ( tok -- opid? astid? f )
+  dup uopid if
+    nip AST_UNARYOP 1 else lopid if
+      AST_LVALUEOP 1 else 0 then then ;
+
 : parseExpression ( tok -- exprnode )
-  dup uopid if ( tok uopid )
-    nip AST_UNARYOP createnode ( uopid node ) swap , ( node )
+  dup parseUnaryOp if ( tok opid astid )
+    createnode ( tok opid node ) swap , nip ( node )
     _nextt parseExpression ( uopnode expr )
     over addnode ( node )
   else ( tok )
@@ -158,37 +177,57 @@ ASTIDCNT wordtbl astdatatbl ( node -- node )
     ( node tok ) to nexttputback
   then ;
 
-: parseAssign ( parentnode tok -- )
-  '=' expectChar
-  AST_ASSIGN createnode ( pnode anode ) over data1 ( name ) ,
-  dup rot addnode ( anode )
-  _nextt parseExpression read; ( anode expr ) swap addnode ;
+: parseDeclare ( parentnode -- dnode )
+  0 begin ( pnode *lvl )
+    _nextt dup S" *" s= if drop 1+ 0 else 1 then until ( pnode *lvl tok )
+  expectIdent rot ( *lvl name pnode ) AST_DECLARE newnode ( *lvl name dnode )
+  swap , swap , ( dnode ) ;
 
 : parseDeclarationList ( stmtsnode -- )
-  _nextt expectIdent
-  swap AST_DECLARE newnode swap ,
-  _nextt parseAssign ;
+  parseDeclare _nextt '=' expectChar dup data1 ( dnode name )
+  swap parentnode AST_ASSIGN newnode ( name anode )
+  AST_LVALUE newnode ( name lvnode ) swap , parentnode ( anode )
+  _nextt parseExpression read; ( anode expr ) swap addnode ;
 
 : parseArgSpecs ( funcnode -- )
   _nextt '(' expectChar AST_ARGSPECS newnode _nextt ( argsnode tok )
   dup S" )" s= if 2drop exit then
   begin ( argsnode tok )
-    expectType drop dup _nextt expectIdent
-    swap AST_DECLARE newnode drop ,
+    expectType drop dup parseDeclare drop
     _nextt dup S" )" s= if 2drop exit then
     ',' expectChar _nextt again ;
 
-: parseStatements ( funcnode -- )
+\ Parse an LValue
+: parseAssign ( parent tok -- )
+  swap AST_ASSIGN newnode swap ( anode tok )
+  parseLvalue ( anode lvnode ) over addnode ( anode )
+  _nextt '=' expectChar ( anode )
+  _nextt parseExpression read; ( anode expr ) swap addnode ;
+
+alias noop parseStatements
+
+create statementnames 6 c, ," return" 2 c, ," if" 0 c,
+2 wordtbl statementhandler
+:w ( return )
+  dup AST_RETURN newnode ( snode rnode )
+  _nextt parseExpression read; ( snode rnode expr )
+  swap addnode ( snode ) ;
+:w ( if ) dup AST_IF newnode ( snode ifnode )
+  _nextt '(' expectChar
+  _nextt parseExpression ( sn ifn expr ) over addnode
+  _nextt ')' expectChar
+  parseStatements ;
+
+: _ ( parentnode -- )
   _nextt '{' expectChar AST_STATEMENTS newnode _nextt
   begin ( snode tok )
     dup S" }" s= if 2drop exit then
-    dup S" return" s= if
-      drop AST_RETURN createnode ( snode rnode ) 2dup swap addnode
-      _nextt parseExpression read; ( snode rnode expr )
-      swap addnode ( snode )
-    else
-      expectType drop dup parseDeclarationList then
+    dup statementnames sfind dup 0< if ( snode tok -1 )
+      drop dup isType? if drop dup parseDeclarationList else ( snode tok )
+        over rot> parseAssign then ( snode )
+    else ( snode tok idx ) nip statementhandler swap wexec then ( snode )
     _nextt again ;
+current to parseStatements
 
 : parseFunction ( unitnode tok -- )
   swap AST_FUNCTION newnode swap , 0 , ( funcnode )

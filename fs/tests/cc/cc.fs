@@ -1,4 +1,3 @@
-
 f<< tests/harness.fs
 f<< cc/cc.fs
 
@@ -13,9 +12,13 @@ neg -42 #eq
 bwnot $ffffffd5 #eq
 exprbinops 7 #eq
 boolops 0 #eq
-variables 42 #eq
+variables 82 #eq
 funcall 42 #eq
 2 3 adder 5 #eq
 42 plusone 43 #eq
+ptrget 42 #eq
+ptrset 54 #eq
+12 condif 12 #eq
+42 condif 142 #eq
 
 testend

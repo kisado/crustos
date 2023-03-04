@@ -39,13 +39,18 @@
 
 : tgt-or-src! tgt 0< if to tgt else to src then ;
 : r! ( reg -- ) $300 or ( mod 3 ) tgt-or-src! ;
-: [r]! ( reg -- ) $100 or ( mod 1 ) tgt-or-src! ;
+: [r]! ( reg -- ) ( mod 0 ) tgt-or-src! ;
+: [r]+8b! ( reg -- ) $100 or ( mod 1 ) tgt-or-src! ;
 
 : eax AX r! ; alias eax ax alias eax al
 : ebx BX r! ; alias ebx bx alias ebx bl
 : ebp BP r! ;
-: [ebp] BP [r]! 0 to disp ;
-: [ebp]+ ( disp -- ) BP [r]! to disp ;
+: edi DI r! ;
+: [eax] AX [r]! ;
+: [ebx] BX [r]! ;
+: [ebp] BP [r]+8b! 0 to disp ;
+: [edi] DI [r]! ;
+: [ebp]+ ( disp -- ) BP [r]+8b! to disp ;
 : i32 IMM $400 or to src ;
 
 \ Writing the thing
@@ -96,7 +101,7 @@ $0f85 op jnz,
     c@ src swap ( reg regop ) modrm2, then ;
 $81 0 $01 op add,
 $81 7 $39 op cmp,
-$81 5 29 op sub,
+$81 5 $29 op sub,
 $f7 0 $85 op test,
 
 \ tgt or-ed in

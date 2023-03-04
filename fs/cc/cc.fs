@@ -5,6 +5,7 @@ f<< lib/str.fs
 f<< lib/wordtbl.fs
 f<< lib/xdict.fs
 f<< asm.fs
+f<< cc/vm.fs
 f<< cc/tok.fs
 f<< cc/tree.fs
 f<< cc/ast.fs
