@@ -10,11 +10,11 @@ crust: crust.asm boot.fs
 
 .PHONY: run
 run: crust
-	stty -icanon -echo; ./crust; stty icanon echo
+	@stty -icanon -echo; ./crust; stty icanon echo
 
 .PHONY: test
 test: crust
-	echo "f<< tests/all.fs bye" | ./crust && echo "all tests passed"
+	@echo "f<< tests/all.fs bye" | ./crust && echo "all tests passed"
 
 .PHONY: clean
 clean:
